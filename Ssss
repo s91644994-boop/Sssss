@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superhero Creator & Battle</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+  body { background: #121212; color: #fff; text-align: center; overflow: hidden; }
+  #creator-screen, #battle-screen { padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+  .card { background: #1e1e24; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+  input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; }
+  input, select { background: #2b2b36; color: #fff; }
+  button { background: #e63946; color: white; font-weight: bold; cursor: pointer; }
+  button:hover { background: #d62828; }
+  canvas { background: #1a1a24; border: 2px solid #333; border-radius: 8px; width: 100%; max-width: 600px; height: 350px; }
+  .controls { margin-top: 15px; display: flex; gap: 10px; width: 100%; max-width: 600px; }
+  .controls button { flex: 1; }
+  .hud { font-size: 18px; margin-bottom: 10px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<!-- CREATOR SCREEN -->
+<div id="creator-screen">
+  <div class="card">
+    <h2>Superhero Creator</h2>
+    <input type="text" id="hero-name" placeholder="Hero ka Naam (e.g. Flame Spider)" value="Blaze Hero">
+    
+    <label>Suit Color:</label>
+    <select id="suit-color">
+      <option value="#e63946">Laal (Red)</option>
+      <option value="#1d3557">Neela (Blue)</option>
+      <option value="#2a9d8f">Hara (Green)</option>
+      <option value="#4a4e69">Kaala (Dark)</option>
+    </select>
+
+    <label>Main Power:</label>
+    <select id="power-type">
+      <option value="fire">Fire Blast (Aag)</option>
+      <option value="web">Web Trap (Spider Web)</option>
+      <option value="both">Fire + Spider Combo</option>
+    </select>
+
+    <button onclick="startGame()">Hero Banao Aur Ladne Jao!</button>
+  </div>
+</div>
+
+<!-- BATTLE SCREEN -->
+<div id="battle-screen" style="display: none;">
+  <div class="hud" id="hud-text">Hero: 100 HP | Villain: 100 HP</div>
+  <canvas id="gameCanvas" width="600" height="350"></canvas>
+  
+  <div class="controls">
+    <button onclick="moveLeft()">⬅ Left</button>
+    <button onclick="attack('fire')">🔥 Fire</button>
+    <button onclick="attack('web')">🕸️ Web</button>
+    <button onclick="moveRight()">Right ➡</button>
+  </div>
+</div>
+
+<script>
+  let hero = { x: 50, y: 260, hp: 100, name: '', color: '', power: '' };
+  let villain = { x: 480, y: 260, hp: 100, color: '#8338ec', trapped: 0 };
+  let projectiles = [];
+  let canvas, ctx;
+
+  function startGame() {
+    hero.name = document.getElementById('hero-name').value || 'Hero';
+    hero.color = document.getElementById('suit-color').value;
+    hero.power = document.getElementById('power-type').value;
+
+    document.getElementById('creator-screen').style.display = 'none';
+    document.getElementById('battle-screen').style.display = 'flex';
+
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
+    
+    setInterval(updateGame, 30);
+    setInterval(villainAI, 1500);
+  }
+
+  function moveLeft() { if(hero.x > 20) hero.x -= 20; }
+  function moveRight() { if(hero.x < villain.x - 50) hero.x += 20; }
+
+  function attack(type) {
+    projectiles.push({
+      x: hero.x + 30,
+      y: hero.y + 20,
+      type: type,
+      speed: 8
+    });
+  }
+
+  function villainAI() {
+    if (villain.hp <= 0) return;
+    if (villain.trapped > 0) {
+      villain.trapped--;
+      return;
+    }
+    // Villain attacks hero
+    projectiles.push({
+      x: villain.x,
+      y: villain.y + 20,
+      type: 'enemy',
+      speed: -6
+    });
+  }
+
+  function updateGame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Floor
+    ctx.fillStyle = '#333';
+    ctx.fillRect(0, 310, canvas.width, 40);
+
+    // Draw Hero
+    ctx.fillStyle = hero.color;
+    ctx.fillRect(hero.x, hero.y, 35, 50);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(hero.name, hero.x - 5, hero.y - 10);
+
+    // Draw Villain
+    if (villain.hp > 0) {
+      ctx.fillStyle = villain.color;
+      ctx.fillRect(villain.x, villain.y, 40, 50);
+      ctx.fillStyle = '#ff4d6d';
+      ctx.fillText('Villain Boss', villain.x - 10, villain.y - 10);
+
+      if (villain.trapped > 0) {
+        ctx.strokeStyle = '#fff';
+        ctx.strokeRect(villain.x - 5, villain.y - 5, 50, 60);
+      }
+    }
+
+    // Move & Draw Projectiles
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      let p = projectiles[i];
+      p.x += p.speed;
+
+      if (p.type === 'fire') {
+        ctx.fillStyle = '#ff5400';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.type === 'web') {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(p.x, p.y, 14, 10);
+      } else if (p.type === 'enemy') {
+        ctx.fillStyle = '#9b5de5';
+        ctx.fillRect(p.x, p.y, 8, 8);
+      }
+
+      // Check hits on Villain
+      if (p.speed > 0 && p.x >= villain.x && villain.hp > 0) {
+        if (p.type === 'fire') villain.hp -= 15;
+        if (p.type === 'web') { villain.hp -= 5; villain.trapped = 2; }
+        projectiles.splice(i, 1);
+      }
+      // Check hits on Hero
+      else if (p.speed < 0 && p.x <= hero.x + 35) {
+        hero.hp -= 10;
+        projectiles.splice(i, 1);
+      }
+    }
+
+    // Update HUD
+    document.getElementById('hud-text').innerText = 
+      `${hero.name}: ${Math.max(0, hero.hp)} HP | Villain: ${Math.max(0, villain.hp)} HP`;
+
+    if (villain.hp <= 0) {
+      ctx.fillStyle = '#2ec4b6';
+      ctx.font = '24px sans-serif';
+      ctx.fillText('YOU WON! Villain Haar Gaya!', 140, 150);
+    } else if (hero.hp <= 0) {
+      ctx.fillStyle = '#e63946';
+      ctx.font = '24px sans-serif';
+      ctx.fillText('GAME OVER!', 230, 150);
+    }
+  }
+</script>
+</body>
+</html>
